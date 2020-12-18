@@ -56,6 +56,10 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  for (auto &p : particles)
+  {
+    p.predict(delta_t, std_pos, velocity, yaw_rate);
+  }
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
@@ -72,7 +76,7 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
-                                   const vector<LandmarkObs> &observations,
+                                   const vector<LandmarkObs> &observations_in_car_coordinate,
                                    const Map &map_landmarks)
 {
   /**
@@ -88,6 +92,33 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+  static const double EPSILON = std::numeric_limits<double>::min();
+  for (auto &p : particles)
+  {
+    // Transform observations with relation to the particle
+    std::vector<LandmarkObs> obs = p.convert_observations_to_map(observations_in_car_coordinate);
+
+    // Match landmarks to observation and update particle weight based on multivariate gaussian
+    double particle_weight = 1;
+    for (const auto &lm : map_landmarks.landmark_list)
+    {
+      // Too far observations are skipped
+      if (p.distance(lm) > sensor_range)
+        continue;
+
+      auto best_obs = std::min_element(obs.begin(), obs.end(), [&lm](const auto &a, const auto &b) {
+        return dist(a.x, a.y, lm.x_f, lm.y_f) < dist(b.x, b.y, lm.x_f, lm.y_f);
+      });
+
+      // Calculate multivariate gaussian for observation and update total weight for particle
+      auto weight = multiv_prob(std_landmark[0], std_landmark[1], best_obs->x, best_obs->y, lm.x_f, lm.y_f);
+      weight = std::max(EPSILON, weight);
+      //
+      particle_weight *= weight;
+    }
+
+    p.weight = std::max(particle_weight, EPSILON);
+  }
 }
 
 void ParticleFilter::resample()
@@ -98,6 +129,25 @@ void ParticleFilter::resample()
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
+  std::vector<double> weights;
+  weights.reserve(particles.size());
+
+  std::vector<Particle> new_particles;
+  new_particles.reserve(particles.size());
+
+  for (const auto &p : particles)
+  {
+    weights.push_back(p.weight);
+  }
+
+  std::default_random_engine gen;
+  std::discrete_distribution<> dist_index(weights.begin(), weights.end());
+  for (int i = 0; i < num_particles; ++i) 
+  {
+    int index = dist_index(gen);
+    new_particles.push_back(particles[index]);
+  }
+  // std::swap(particles, new_particles);
 }
 
 void ParticleFilter::SetAssociations(Particle &particle,

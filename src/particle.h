@@ -8,16 +8,15 @@
 class Particle
 {
   static int id_cnt;
+  std::vector<LandmarkObs> convert_observations_to_map(const std::vector<LandmarkObs>& obs) const;
+  double distance(const Map::single_landmark_s& landmark) const;
+
  public:
   Particle() = default;
   Particle(double _x, double _y, double _theta) : id(id_cnt++), x(_x), y(_y), theta(_theta), weight(1.0) {}
   
   void predict(double delta_t, double std_pos[], double velocity, double yaw_rate);
-
-  std::vector<LandmarkObs> convert_observations_to_map(const std::vector<LandmarkObs>& obs) const;
-  double distance(const Map::single_landmark_s& landmark) const;
-
-  // void update_weight();
+  void updateWeight(double sensor_range, const double std_landmark[], const std::vector<LandmarkObs> &observations_in_car_coordinate, const Map &map_landmarks);
 
   int id;
   double x;

@@ -42,6 +42,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 
   for (int i = 0; i < num_particles; ++i)
   {
+    // Calling particle constructor with added noise
     particles[i] = Particle(dist_x(gen), dist_y(gen), dist_theta(gen));
   }
 }
@@ -56,6 +57,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  // Iterate over particles and predict each
   for (auto &p : particles)
   {
     p.predict(delta_t, std_pos, velocity, yaw_rate);
@@ -79,33 +81,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
-  static const double EPSILON = std::numeric_limits<double>::min();
   for (auto &p : particles)
   {
-    // Transform observations to map coordinate system
-    std::vector<LandmarkObs> observations = p.convert_observations_to_map(observations_in_car_coordinate);
-
-    // Match landmarks to observation and update particle weight based on multivariate gaussian
-    double particle_weight = 1;
-
-    for (const auto &obs : observations)
-    {
-      auto best_landmark = std::min_element(
-          map_landmarks.landmark_list.begin(),
-          map_landmarks.landmark_list.end(),
-          [&obs, &p, sensor_range](const auto &a, const auto &b) {
-            auto aval = dist(p.x, p.y, a.x_f, a.y_f) < sensor_range ? dist(a.x_f, a.y_f, obs.x, obs.y) : std::numeric_limits<double>::max();
-            auto bval = dist(p.x, p.y, b.x_f, b.y_f) < sensor_range ? dist(b.x_f, b.y_f, obs.x, obs.y) : std::numeric_limits<double>::max();
-            return aval < bval;
-          });
-
-      // Calculate multivariate gaussian for observation and update total weight for particle
-      auto weight = multiv_prob(std_landmark[0], std_landmark[1], obs.x, obs.y, best_landmark->x_f, best_landmark->y_f);
-      weight = std::max(EPSILON, weight);
-      //
-      particle_weight *= weight;
-    }
-    p.weight = std::max(particle_weight, EPSILON);
+    p.updateWeight(sensor_range, std_landmark, observations_in_car_coordinate, map_landmarks);
   }
 }
 

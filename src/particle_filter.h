@@ -12,23 +12,7 @@
 #include <string>
 #include <vector>
 #include "helper_functions.h"
-
-struct Particle {
-  static int id_cnt;
-
-  Particle() = default;
-  Particle(double _x, double _y, double _theta): id(id_cnt++), x(_x), y(_y), theta(_theta), weight(1.0) {}
-
-  int id;
-  double x;
-  double y;
-  double theta;
-  double weight;
-  std::vector<int> associations;
-  std::vector<double> sense_x;
-  std::vector<double> sense_y;
-};
-
+#include "particle.h"
 
 class ParticleFilter {  
  public:

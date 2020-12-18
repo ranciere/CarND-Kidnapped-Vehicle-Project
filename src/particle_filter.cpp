@@ -21,8 +21,6 @@
 using std::string;
 using std::vector;
 
-int Particle::id_cnt = 0;
-
 void ParticleFilter::init(double x, double y, double theta, double std[])
 {
   /**
@@ -34,6 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
    *   (and others in this file).
    */
   num_particles = 100; // TODO: Set the number of particles
+  particles.clear();
   particles.resize(num_particles);
   // Random
   std::default_random_engine gen;

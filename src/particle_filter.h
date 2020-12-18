@@ -14,6 +14,11 @@
 #include "helper_functions.h"
 
 struct Particle {
+  static int id_cnt;
+
+  Particle() = default;
+  Particle(double _x, double _y, double _theta): id(id_cnt++), x(_x), y(_y), theta(_theta), weight(1.0) {}
+
   int id;
   double x;
   double y;
